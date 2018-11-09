@@ -6,6 +6,18 @@ import (
 	"strings"
 )
 
+// takes in a full list of strings and turns them into a HAProxyStatSnapshot
+func ParseToSnapshot(data []string, parser func(statsLine string) HAProxyStat) *HAProxyStatSnapshot {
+	snapshot := GenerateNewSnapshot()
+	for _, line := range data {
+		if len(line) < 2 || strings.HasPrefix(line, "# ") {
+			continue
+		}
+		snapshot.Stats = append(snapshot.Stats, parser(line))
+	}
+	return snapshot
+}
+
 // Create a new parser.
 // Pass in the header line (first line) of the socket output
 // parser := CreateHAProxyCSVParser(headers)
