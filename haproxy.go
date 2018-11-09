@@ -1,6 +1,5 @@
 package HAProxyGoStat
 
-
 // HAProxyColumnNames is a map of the names HAProxy gives to the fields in the HAProxyStat struct
 var HAProxyColumnNames = map[string]string{
 	"pxname":         "ProxyName",
@@ -173,6 +172,3 @@ type HAProxyStat struct {
 	DeniedConnections  int
 	DeniedSessions     int
 }
-
-
-

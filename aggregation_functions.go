@@ -11,7 +11,7 @@ func sumInt(stats []int) int {
 
 func averageInt(stats []int) float32 {
 	sum := float32(sumInt(stats))
-	average := sum/float32(len(stats))
+	average := sum / float32(len(stats))
 	return average
 }
 
@@ -24,4 +24,3 @@ func maxInt(stats []int) int {
 	}
 	return max
 }
-

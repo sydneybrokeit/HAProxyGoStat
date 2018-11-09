@@ -1,9 +1,94 @@
 package HAProxyGoStat
 
-import "github.com/oleiade/reflections"
+import (
+	"fmt"
+	"github.com/oleiade/reflections"
+)
 
-var HAProxyFieldAggregationFunctions = map[string]string {
-
+var HAProxyFieldAggregationFunctions = map[string]string{
+	"ProxyName":          "string",
+	"ServerName":         "string",
+	"CurrentQueue":       "sum",
+	"MaxQueue":           "max",
+	"CurrentSessions":    "sum",
+	"MaxSessions":        "max",
+	"SessionLimit":       "max",
+	"TotalSessions":      "sum",
+	"BytesIn":            "sum",
+	"BytesOut":           "sum",
+	"DeniedRequests":     "sum",
+	"DeniedResponses":    "sum",
+	"ErrorRequests":      "sum",
+	"ErrorConnections":   "sum",
+	"ErrorResponses":     "sum",
+	"ServerRetry":        "sum",
+	"ServerRedispatch":   "sum",
+	"Status":             "string",
+	"Weight":             "int",
+	"ActiveServers":      "max",
+	"BackupServers":      "max",
+	"FailedChecks":       "sum",
+	"DownTransitions":    "sum",
+	"LastTransition":     "sum",
+	"Downtime":           "sum",
+	"QueueLimit":         "max",
+	"PID":                "pass",
+	"IID":                "pass",
+	"ServerID":           "pass",
+	"Throttle":           "average",
+	"LoadBalanceTotal":   "sum",
+	"Tracked":            "pass",
+	"Type":               "string",
+	"Rate":               "sum",
+	"RateLimit":          "max",
+	"RateMax":            "max",
+	"CheckStatus":        "string",
+	"CheckCode":          "pass",
+	"CheckDuration":      "average",
+	"HTTP1xx":            "sum",
+	"HTTP2xx":            "sum",
+	"HTTP3xx":            "sum",
+	"HTTP4xx":            "sum",
+	"HTTP5xx":            "sum",
+	"HTTPOther":          "sum",
+	"HANAFail":           "string",
+	"HTTPRequestRate":    "sum",
+	"HTTPRequestRateMax": "max",
+	"HTTPRequestsTotal":  "sum",
+	"ClientAbort":        "sum",
+	"ServerAbort":        "sum",
+	"CompressorIn":       "sum",
+	"CompressorOut":      "sum",
+	"CompressorBypass":   "sum",
+	"CompressorResponse": "sum",
+	"LastSession":        "max",
+	"LastCheck":          "string",
+	"LastAgent":          "string",
+	"QueueTime":          "average",
+	"ConnectTime":        "average",
+	"ResponseTime":       "average",
+	"TotalTime":          "average",
+	"AgentStatus":        "string",
+	"AgentCode":          "pass",
+	"AgentDuration":      "average",
+	"CheckDescription":   "string",
+	"AgentDescription":   "string",
+	"CheckRise":          "sum",
+	"CheckFall":          "sum",
+	"CheckHealth":        "sum",
+	"AgentRise":          "sum",
+	"AgentFall":          "sum",
+	"AgentHealth":        "sum",
+	"Address":            "string",
+	"Cookie":             "string",
+	"Mode":               "string",
+	"Algorithm":          "string",
+	"ConnectionRate":     "sum",
+	"ConnectionRateMax":  "max",
+	"ConnectionTotal":    "sum",
+	"Intercepted":        "sum",
+	"DeniedConnections":  "sum",
+	"DeniedSessions":     "sum",
 }
 
 // filters all snapshots in a multisnapshot
@@ -35,56 +120,45 @@ func (multisnapshot *HAProxyMultiSnapshot) Aggregate() *HAProxyStatSnapshot {
 	if err != nil {
 		panic(err.Error())
 	}
-	for _, attr := range fields {
-		switch HAProxyFieldAggregationFunctions[attr] {
-		case "sum":
-			ints := make([]int, 0)
-			for i, snapshot := range multisnapshot.Snapshots {
-				innerStat, err := reflections.GetField(snapshot.Stats[i], attr)
-				if err != nil {
-					panic(err.Error())
-				}
-				innerStatInt := innerStat.(int)
-				ints = append(ints, innerStatInt)
-			}
-			sumOfSnapshots := sumInt(ints)
-			err := reflections.SetField(&aggregate.Stats, attr, sumOfSnapshots)
+	snapshotLen := len(multisnapshot.Snapshots)
+	for i, _ := range multisnapshot.Snapshots[0].Stats {
+		aggregate.Stats = append(aggregate.Stats, *new(HAProxyStat))
+		for _, attr := range fields {
+			fieldType, err := reflections.GetFieldType(multisnapshot.Snapshots[0].Stats[0], attr)
 			if err != nil {
 				panic(err.Error())
 			}
-		case "average":
-			ints := make([]int, 0)
-			for i, snapshot := range multisnapshot.Snapshots {
-				innerStat, err := reflections.GetField(snapshot.Stats[i], attr)
+			if fieldType == "int" {
+				ints := make([]int, 0)
+				for x := 0; x < snapshotLen; x++ {
+					inner, err := reflections.GetField(multisnapshot.Snapshots[x].Stats[i], attr)
+					if err != nil {
+						panic(err.Error())
+					}
+					innerInt := inner.(int)
+					ints = append(ints, innerInt)
+				}
+				var newValue int
+				switch HAProxyFieldAggregationFunctions[attr] {
+				case "sum":
+					newValue = sumInt(ints)
+				case "average":
+					newValue = int(averageInt(ints))
+				case "max":
+					newValue = maxInt(ints)
+				}
+				err := reflections.SetField(&aggregate.Stats[i], attr, newValue)
 				if err != nil {
 					panic(err.Error())
 				}
-				innerStatInt := innerStat.(int)
-				ints = append(ints, innerStatInt)
-			}
-			averageOfSnapshots := int(averageInt(ints))
-			err := reflections.SetField(&aggregate.Stats, attr, averageOfSnapshots)
-			if err != nil {
-				panic(err.Error())
-			}
-		case "max":
-			ints := make([]int, 0)
-			for i, snapshot := range multisnapshot.Snapshots {
-				innerStat, err := reflections.GetField(snapshot, attr)
+			} else {
+				newValue, _ := reflections.GetField(multisnapshot.Snapshots[0].Stats[i], attr)
+				err := reflections.SetField(&aggregate.Stats[i], attr, newValue)
 				if err != nil {
+					fmt.Println(aggregate)
 					panic(err.Error())
 				}
-				innerStatInt := innerStat.(int)
-				ints = append(ints, innerStatInt)
 			}
-			maxOfSnapshots := maxInt(ints)
-			err := reflections.SetField(&aggregate.Stats, attr, maxOfSnapshots)
-			if err != nil {
-				panic(err.Error())
-			}
-		case "passthrough":
-			passthrough, err := reflections.GetField(multisnapshot.Snapshots[0], att)
-			err := reflections.SetField(&aggregate, )
 		}
 	}
 	return aggregate

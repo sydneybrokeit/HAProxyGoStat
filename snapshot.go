@@ -22,6 +22,3 @@ func GenerateNewSnapshot() *HAProxyStatSnapshot {
 	snapshot.Stats = make([]HAProxyStat, 0)
 	return snapshot
 }
-
-
-
