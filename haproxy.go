@@ -1,10 +1,5 @@
 package HAProxyGoStat
 
-import (
-	"github.com/oleiade/reflections"
-	"strconv"
-	"strings"
-)
 
 // HAProxyColumnNames is a map of the names HAProxy gives to the fields in the HAProxyStat struct
 var HAProxyColumnNames = map[string]string{
@@ -179,77 +174,5 @@ type HAProxyStat struct {
 	DeniedSessions     int
 }
 
-// A single snapshot, a collection of individual stats.
-type HAProxyStatSnapshot struct {
-	Stats []HAProxyStat
-}
 
-// takes a function, f, with a boolean return, and filters to those values that return True
-func (stats *HAProxyStatSnapshot) Filter(f func(HAProxyStat) bool) *HAProxyStatSnapshot {
-	snapshot := GenerateNewSnapshot()
-	for _, stat := range stats.Stats {
-		if f(stat) {
-			snapshot.Stats = append(snapshot.Stats, stat)
-		}
-	}
-	return snapshot
-}
 
-// Instantiate a new Snapshot
-func GenerateNewSnapshot() *HAProxyStatSnapshot {
-	snapshot := new(HAProxyStatSnapshot)
-	snapshot.Stats = make([]HAProxyStat, 0)
-	return snapshot
-}
-
-// a collection of multiple snapshots; useful for multiple sockets
-type HAProxyMultiSnapshot struct {
-	Snapshots []HAProxyStatSnapshot
-}
-
-// filters all snapshots in a multisnapshot
-func (multisnapshot *HAProxyMultiSnapshot) Filter(f func(HAProxyStat) bool) *HAProxyMultiSnapshot {
-	newSnapshot := GenerateNewMultiSnapshot()
-	for _, snapshot := range multisnapshot.Snapshots {
-		filtered := snapshot.Filter(f)
-		newSnapshot.Snapshots = append(newSnapshot.Snapshots, *filtered)
-	}
-	return newSnapshot
-}
-
-//instantiate a new multisnapshot
-func GenerateNewMultiSnapshot() *HAProxyMultiSnapshot {
-	snapshot := new(HAProxyMultiSnapshot)
-	snapshot.Snapshots = make([]HAProxyStatSnapshot, 0)
-	return snapshot
-}
-
-// Create a new parser.
-// Pass in the header line (first line) of the socket output
-// parser := CreateHAProxyCSVParser(headers)
-// stat = parser(line)
-func CreateHAProxyCSVParser(headers string) func(statsLine string) HAProxyStat {
-	HeaderMap := strings.Split(strings.TrimSpace(strings.TrimPrefix(headers, "# ")), ",")
-	for i, header := range HeaderMap {
-		HeaderMap[i] = HAProxyColumnNames[header]
-	}
-	return func(statsLine string) HAProxyStat {
-		statsLineSplit := strings.Split(strings.TrimSpace(statsLine), ",")
-		stat := new(HAProxyStat)
-		for i, header := range HeaderMap {
-			if strings.HasPrefix(statsLineSplit[i], "# ") {
-				continue
-			}
-			statInt, err := strconv.Atoi(statsLineSplit[i])
-			if err != nil {
-				err = reflections.SetField(stat, header, statsLineSplit[i])
-			} else {
-				err = reflections.SetField(stat, header, statInt)
-			}
-			if err != nil {
-				continue
-			}
-		}
-		return *stat
-	}
-}
