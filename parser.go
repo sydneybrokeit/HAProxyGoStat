@@ -4,6 +4,7 @@ import (
 	"github.com/oleiade/reflections"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // takes in a full list of strings and turns them into a HAProxyStatSnapshot
@@ -34,6 +35,7 @@ func CreateHAProxyCSVParser(headers string) func(statsLine string) HAProxyStat {
 			if strings.HasPrefix(statsLineSplit[i], "# ") {
 				continue
 			}
+			stat.Timestamp = time.Now()
 			statInt, err := strconv.Atoi(statsLineSplit[i])
 			if err != nil {
 				err = reflections.SetField(stat, header, statsLineSplit[i])

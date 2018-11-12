@@ -1,5 +1,7 @@
 package HAProxyGoStat
 
+import "time"
+
 // HAProxyColumnNames is a map of the names HAProxy gives to the fields in the HAProxyStat struct
 var HAProxyColumnNames = map[string]string{
 	"pxname":         "ProxyName",
@@ -88,6 +90,7 @@ var HAProxyColumnNames = map[string]string{
 }
 
 type HAProxyStat struct {
+	Timestamp		   time.Time
 	ProxyName          string // proxy name
 	ServerName         string // server name or FRONTEND/BACKEND
 	CurrentQueue       int

@@ -1,7 +1,10 @@
 package HAProxyGoStat
 
+import "time"
+
 // A single snapshot, a collection of individual stats.
 type HAProxyStatSnapshot struct {
+	Created time.Time
 	Stats []HAProxyStat
 }
 

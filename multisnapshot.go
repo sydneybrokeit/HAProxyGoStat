@@ -6,6 +6,7 @@ import (
 )
 
 var HAProxyFieldAggregationFunctions = map[string]string{
+	"Timestamp":		  "pass",
 	"ProxyName":          "string",
 	"ServerName":         "string",
 	"CurrentQueue":       "sum",
